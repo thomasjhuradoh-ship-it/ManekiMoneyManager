@@ -2,72 +2,74 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction, Forecast } from "../types";
 
-// Always initialize with the direct process.env.API_KEY reference
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to get AI instance - strictly following direct process.env.API_KEY guidelines
+const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+const SYSTEM_INSTRUCTION = `Eres Maneki-AI, un gato de la fortuna japonés experto en finanzas. 
+Tu estilo es neo-brutalista: directo, sabio y un poco místico. 
+Ayuda al usuario a ahorrar mencionando conceptos como el Ikigai financiero o la disciplina del Daruma.`;
 
 export async function getFinancialForecast(transactions: Transaction[]): Promise<Forecast> {
   if (transactions.length === 0) {
     return {
       nextWeekEstimate: 0,
       nextMonthEstimate: 0,
-      insights: "¡Hola! Empieza a registrar tus gastos para que el Maneki Neko pueda ayudarte a predecir tu futuro financiero.",
+      insights: "¡Miau! El tablero está vacío. Registra tus monedas para ver el futuro.",
       riskLevel: 'low'
     };
   }
 
-  const prompt = `Analiza los siguientes movimientos financieros y predice el gasto aproximado para la próxima semana y el próximo mes. 
-  Genera también un consejo financiero corto y divertido al estilo japonés.
-  
-  Movimientos: ${JSON.stringify(transactions)}
-  
-  Responde estrictamente en formato JSON.`;
+  // Initializing GenAI instance right before the call
+  const ai = getAI();
+  const prompt = `Analiza estos datos financieros: ${JSON.stringify(transactions)}. 
+  Genera una predicción de gastos y un consejo místico.`;
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            nextWeekEstimate: { type: Type.NUMBER, description: 'Estimación de gastos para la próxima semana.' },
-            nextMonthEstimate: { type: Type.NUMBER, description: 'Estimación de gastos para el próximo mes.' },
-            insights: { type: Type.STRING, description: 'Consejo financiero corto y motivacional.' },
-            riskLevel: { type: Type.STRING, enum: ['low', 'medium', 'high'], description: 'Nivel de riesgo financiero actual.' }
+            nextWeekEstimate: { type: Type.NUMBER },
+            nextMonthEstimate: { type: Type.NUMBER },
+            insights: { type: Type.STRING },
+            riskLevel: { type: Type.STRING, enum: ['low', 'medium', 'high'] }
           },
           required: ["nextWeekEstimate", "nextMonthEstimate", "insights", "riskLevel"]
         }
       }
     });
 
-    const resultText = response.text;
-    if (!resultText) {
-      throw new Error("Empty response from AI");
-    }
-
-    return JSON.parse(resultText.trim()) as Forecast;
+    const text = response.text || "{}";
+    return JSON.parse(text) as Forecast;
   } catch (error) {
-    console.error("Gemini Error:", error);
+    console.error("AI Error:", error);
     return {
       nextWeekEstimate: 0,
       nextMonthEstimate: 0,
-      insights: "El Maneki Neko está meditando. Intenta consultar tu futuro en un momento.",
+      insights: "Las nubes ocultan tu destino financiero. Intenta de nuevo más tarde.",
       riskLevel: 'low'
     };
   }
 }
 
-export async function getGoalAdvice(transactions: Transaction[]): Promise<string> {
-  const prompt = `Actúa como un sabio Maneki Neko (gato de la fortuna). Basado en estos gastos: ${JSON.stringify(transactions.slice(0, 10))}, da un único consejo financiero corto (máximo 12 palabras), divertido y motivador para alcanzar metas de ahorro. Sé muy directo y usa un tono de sabiduría japonesa moderna. No uses introducciones, solo el consejo.`;
+export async function getQuickAdvice(transactions: Transaction[]): Promise<string> {
+  // Initializing GenAI instance right before the call
+  const ai = getAI();
+  const prompt = `Dame un consejo financiero de 12 palabras máximo basado en estos gastos: ${JSON.stringify(transactions.slice(0, 5))}`;
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
+      config: { systemInstruction: SYSTEM_INSTRUCTION }
     });
-    return response.text?.replace(/"/g, '').trim() || "La disciplina de hoy es la fortuna del mañana.";
+    return response.text?.trim() || "La fortuna favorece a quienes vigilan sus centavos.";
   } catch (error) {
-    return "Tu determinación es el imán más fuerte para la riqueza.";
+    return "La disciplina es el camino a la riqueza.";
   }
 }
