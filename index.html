@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Maneki Money</title>
     
     <!-- PWA Meta Tags -->
@@ -34,11 +34,12 @@
             background-size: 24px 24px;
             margin: 0;
             padding: 0;
-            /* Prevent bounce scrolling on mobile */
             position: fixed;
             width: 100%;
             height: 100%;
             overflow: hidden;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
         }
         #root {
             height: 100%;
@@ -68,9 +69,6 @@
             transform: translate(2px, 2px);
             box-shadow: 2px 2px 0px var(--black);
         }
-        .neo-shadow {
-            box-shadow: 6px 6px 0px var(--black);
-        }
         @keyframes bounce-subtle {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-5px); }
@@ -78,7 +76,10 @@
         .animate-bounce-subtle {
             animation: bounce-subtle 3s ease-in-out infinite;
         }
+        #root::-webkit-scrollbar { display: none; }
+        #root { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
+
 </head>
 <body class="overflow-x-hidden">
     <div id="root"></div>
